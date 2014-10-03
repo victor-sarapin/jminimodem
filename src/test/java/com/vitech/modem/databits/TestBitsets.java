@@ -14,19 +14,19 @@ public class TestBitsets {
     @Test
     public void ascii8(){
         IDatabits codec = new ASCII();
-        testString.equals(new String(codec.decode(codec.encode(testString.getBytes()))));
+        Assert.assertEquals(testString, new String(codec.decode(codec.encode(testString.getBytes()))));
     }
 
     @Test
     public void binary(){
         IDatabits codec = new Binary();
         String sample = "010101\n";
-        sample.equals(new String(codec.decode(codec.encode(sample.getBytes()))));
+        Assert.assertEquals(sample, new String(codec.decode(codec.encode(sample.getBytes()))));
     }
 
     @Test
     public void baudot(){
         IDatabits codec = new Baudot();
-        testString.equals(new String(codec.decode(codec.encode(testString.getBytes()))));
+        Assert.assertEquals(testString, new String(codec.decode(codec.encode(testString.getBytes()))));
     }
 }

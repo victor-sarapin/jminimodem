@@ -1,6 +1,7 @@
 package com.vitech.modem.databits;
 
 import java.text.MessageFormat;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.logging.Logger;
 
@@ -200,17 +201,8 @@ public class Baudot implements IDatabits {
             baudot_charset = 1;
         }
 
-        if ( stuff_char > 0) {
-            int t;
-            if ( baudot_charset == 1 )
-                t = 0;
-            else
-                t = 1;	// U.S. figs
-            // t = 2;	// CCITT figs
+        int t = ( baudot_charset == 1 ) ? 0 : 1;
             return baudot_decode_table[databits[0]][t];
-        }
-
-        throw new IllegalArgumentException("Not a Baudot sequence");
     }
 
 
@@ -284,11 +276,26 @@ public class Baudot implements IDatabits {
 
     @Override
     public BitSet encode(byte[] data) {
-        return null;
+        byte[] raw = new byte[data.length*2];
+
+        for(int i = 0; i < data.length; i++) {
+            byte[] encoded = baudot_encode(data[i]);
+            raw[i*2] = encoded[0];
+            raw[i*2+1] = encoded[1];
+        }
+
+        return BitSet.valueOf(raw);
     }
 
     @Override
     public byte[] decode(BitSet bits) {
-        return new byte[0];
+        byte[] raw = bits.toByteArray();
+        byte[] result = new byte[raw.length/2 + 1];
+
+        for(int i = 0; i < result.length; i++) {
+            result[i] = baudot_decode(Arrays.copyOfRange(raw, i*2, i*2 + 2));
+        }
+
+        return result;
     }
 }
