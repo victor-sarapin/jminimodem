@@ -184,25 +184,29 @@ public class Baudot implements IDatabits {
         baudot_charset = 1;
     }
 
-    private byte baudot_decode(byte[] databits)
+    private int baudot_decode(byte databits, byte[] char_outp, int outputPos)
     {
         /* Baudot (RTTY) */
-        assert( (databits[0] & ~0x1F) == 0 );
+        assert( (databits & ~0x1F) == 0 );
 
         int stuff_char = 1;
 
-        if ( databits[0] == BAUDOT_FIGS ) {
+        if ( databits == BAUDOT_FIGS ) {
             baudot_charset = 2;
             stuff_char = 0;
-        } else if ( databits[0] == BAUDOT_LTRS ) {
+        } else if ( databits == BAUDOT_LTRS ) {
             baudot_charset = 1;
             stuff_char = 0;
-        } else if ( databits[0] == BAUDOT_SPACE ) {	/* RX un-shift on space */
+        } else if ( databits == BAUDOT_SPACE ) {	/* RX un-shift on space */
             baudot_charset = 1;
         }
 
-        int t = ( baudot_charset == 1 ) ? 0 : 1;
-            return baudot_decode_table[databits[0]][t];
+        if(stuff_char > 0) {
+            int t = (baudot_charset == 1) ? 0 : 1;
+            char_outp[outputPos] = baudot_decode_table[databits][t];
+        }
+
+        return stuff_char;
     }
 
 
@@ -214,15 +218,13 @@ public class Baudot implements IDatabits {
     /*
      * Returns the number of 5-bit data words stuffed into *databits_outp (1 or 2)
      */
-    private byte[] baudot_encode(byte char_out)
+    private int baudot_encode(byte char_out, byte[] databits_outp, int outputPos)
     {
-        byte[] databits_outp = new byte[2];
-
         char_out = (byte) Character.toUpperCase(char_out);
 
         if( char_out >= 0x60 || char_out < 0 ) {
             baudot_skip_warning(char_out);
-            return databits_outp;
+            return 0;
         }
 
         byte ind = char_out;
@@ -246,13 +248,13 @@ public class Baudot implements IDatabits {
                 baudot_charset = charset_mask;
 
             if ( baudot_charset == 1 )
-                databits_outp[n++] = BAUDOT_LTRS;
+                databits_outp[outputPos + n++] = BAUDOT_LTRS;
             else if ( baudot_charset == 2 )
-                databits_outp[n++] = BAUDOT_FIGS;
+                databits_outp[outputPos + n++] = BAUDOT_FIGS;
             else
                 assert false;
 
-            debug_log("I: emit charset select 0x%02X\n", databits_outp[n-1]);
+            debug_log("I: emit charset select 0x%02X\n", databits_outp[outputPos + n-1]);
         }
 
         if ( !( baudot_charset == 1 || baudot_charset == 2 ) ) {
@@ -261,13 +263,13 @@ public class Baudot implements IDatabits {
             assert false;
         }
 
-        databits_outp[n++] = baudot_encode_table[ind][0];
+        databits_outp[outputPos + n++] = baudot_encode_table[ind][0];
 
     /* TX un-shift on space */
         if ( char_out == ' ' )
             baudot_charset = 1;
 
-        return databits_outp;
+        return n;
     }
 
     private void debug_log(String s, byte b) {
@@ -275,27 +277,26 @@ public class Baudot implements IDatabits {
     }
 
     @Override
-    public BitSet encode(byte[] data) {
-        byte[] raw = new byte[data.length*2];
+    public int encode(byte[] source, byte[] encoded) {
+        int encodedCount = 0;
 
-        for(int i = 0; i < data.length; i++) {
-            byte[] encoded = baudot_encode(data[i]);
-            raw[i*2] = encoded[0];
-            raw[i*2+1] = encoded[1];
+        for(int i = 0; i < source.length; i++) {
+            encodedCount += baudot_encode(source[i], encoded, encodedCount);
+
         }
 
-        return BitSet.valueOf(raw);
+        return encodedCount;
     }
 
     @Override
-    public byte[] decode(BitSet bits) {
-        byte[] raw = bits.toByteArray();
-        byte[] result = new byte[raw.length/2 + 1];
+    public int decode(byte[] source, byte[] decoded) {
+        int decodedCount = 0;
 
-        for(int i = 0; i < result.length; i++) {
-            result[i] = baudot_decode(Arrays.copyOfRange(raw, i*2, i*2 + 2));
+        for(int i = 0; i < source.length; i++) {
+            decodedCount += baudot_decode(source[i], decoded, decodedCount);
+
         }
 
-        return result;
+        return decodedCount;
     }
 }

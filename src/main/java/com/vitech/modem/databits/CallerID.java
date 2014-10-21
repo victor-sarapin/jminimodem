@@ -38,17 +38,12 @@ public class CallerID implements IDatabits {
     private byte[] cid_buf = new byte[256];
 
     @Override
-    public BitSet encode(byte[] data) {
+    public int encode(byte[] source, byte[] encoded) {
         throw new IllegalStateException("Not implemented!");
     }
 
-    private void decodeCidReset() {
-        cid_msgtype = 0;
-        cid_ndata = 0;
-    }
-
     @Override
-    public byte[] decode(BitSet bits) {
+    public int decode(byte[] source, byte[] decoded) {
         throw new IllegalStateException("Not implemented!");
     }
 }
